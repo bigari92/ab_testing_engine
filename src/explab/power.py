@@ -82,9 +82,18 @@ class PowerPlan:
     assumptions: tuple[str, ...] = ()
 
     def __str__(self) -> str:
+        # mde_relative is NaN when no baseline was supplied, because a
+        # share of an unknown baseline is not a quantity. Printing
+        # "+nan% relative" would be worse than printing nothing, so the
+        # clause is dropped instead.
+        if math.isnan(self.mde_relative):
+            sized = f"sized to detect {self.mde:.6g} (no baseline given)"
+        else:
+            sized = (f"sized to detect {self.mde:.6g} "
+                     f"({self.mde_relative:+.2%} relative)")
         lines = [
             f"{self.n_per_group:,} units per group ({self.total_n:,} total)",
-            f"sized to detect {self.mde:.6g} ({self.mde_relative:+.2%} relative)",
+            sized,
             f"at {self.power:.0%} power, alpha {self.alpha:.3g} two-sided",
         ]
         if self.assumptions:
@@ -275,8 +284,24 @@ def mde_proportions(
             baseline_rate, effect, alpha=alpha, power=power).n_per_group)
 
     if needed(hi) > n_per_group:
-        # Even the largest representable effect needs more units than we have.
-        return float("nan")
+        # Even an effect as large as the baseline itself - a 100% relative
+        # change - needs more units than there are. There is no MDE to
+        # report, so this raises rather than returning NaN.
+        #
+        # NaN was the original behaviour and it was wrong in a way worth
+        # recording. `segments.py` already wraps this call in
+        # `except ValueError: detectable = None`, so a raise lands in the
+        # handler that was written for it, while NaN sailed straight past
+        # and into a SegmentFinding - where it printed as "nan" in the
+        # report and compared False against every threshold it met.
+        # Found by tests/test_contracts.py.
+        raise ValueError(
+            f"no detectable effect exists at {n_per_group} units per group: "
+            f"even an absolute change of {hi:.4g} from a baseline of "
+            f"{baseline_rate:.4g} would need {needed(hi):,.0f} per group at "
+            f"{power:.0%} power. The honest answer is that this sample "
+            f"cannot detect anything, not a number."
+        )
     for _ in range(200):
         mid = 0.5 * (lo + hi)
         if needed(mid) > n_per_group:

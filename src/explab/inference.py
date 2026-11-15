@@ -35,6 +35,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal, Sequence
+import math
 
 import numpy as np
 
@@ -109,12 +110,29 @@ class TestResult:
         lo, hi = self.ci
         rlo, rhi = self.relative_ci
         verdict = "significant" if self.significant else "not significant"
+        # A relative lift needs something to be relative to. When the
+        # control mean is zero the ratio is undefined, and that fact is
+        # itself worth reading - the treatment produced behaviour that did
+        # not exist before, which no percentage can express. Printing
+        # "relative +nan% [+nan%, +nan%]" in a readout is the same kind of
+        # credibility problem as printing a p-value of zero, so the line
+        # states the situation instead.
+        if math.isnan(self.relative_lift):
+            relative_line = (
+                "  relative undefined (control mean is zero; the absolute "
+                "change above is the whole story)"
+            )
+        else:
+            relative_line = (
+                f"  relative {self.relative_lift:+.2%}  "
+                f"[{rlo:+.2%}, {rhi:+.2%}]"
+            )
         return (
             f"{self.metric}: control {self.mean_control:.6g} -> "
             f"treatment {self.mean_treatment:.6g}\n"
             f"  absolute {self.estimate:+.6g}  "
             f"[{lo:+.6g}, {hi:+.6g}] at {self.confidence:.0%}\n"
-            f"  relative {self.relative_lift:+.2%}  [{rlo:+.2%}, {rhi:+.2%}]\n"
+            f"{relative_line}\n"
             f"  p = {self.p_value:.4g}  ({verdict}, {self.method}, "
             f"n = {self.n_control} vs {self.n_treatment})"
         )
