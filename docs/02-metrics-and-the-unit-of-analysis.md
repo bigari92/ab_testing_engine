@@ -161,6 +161,46 @@ on `engaged` in [document 01](01-what-an-experiment-is.md), and it is the
 real mechanism behind most readouts labelled "Simpson's paradox" — see
 [document 13](13-segments-multiplicity-and-simpson.md).
 
+### Where option 2 is not a complete fix, measured
+
+Honesty requires a caveat on option 2, because `converted` **is** a
+denominator the treatment moves. The refund fix above worked; the same fix
+on revenue does not. A +2pp conversion lift with **no change whatsoever in
+spend per converter**, 300 experiments:
+
+```
+revenue PER USER        significant 80.0% of the time   (correct: it rose)
+revenue PER CONVERTER   significant 21.3% of the time
+  mean shift -1.2392 on a per-converter level of 25.72  =  -4.8%
+  88.7% of runs produced a NEGATIVE estimate
+```
+
+Revenue per converter **falls by 4.8%** with nobody spending differently.
+The marginal converters a lift brings in are lower-quality users — in the
+generator, revenue scales as `exp(0.5q)` while conversion rises with the
+same `q` — so adding them drags the average down. A guardrail on
+"revenue per converter must not decrease" would alert on a genuine win,
+which is the exact trap this document opened with, now surviving the fix.
+
+Why did the refund guardrail escape? Because refund propensity depends on
+`q` only weakly (`0.01·q` on a base of 0.08), so its composition shift —
+the `−0.000159` propensity term measured above — stays far below its own
+noise. Revenue's dependence on `q` is exponential, so the same shift is
+4.8% and trips one time in five.
+
+So the rule is **not** "use a ratio and you are safe". It is:
+
+> **A ratio removes the composition shift in the denominator. It removes
+> the shift in the numerator only if the per-unit rate is roughly
+> independent of which units the treatment added.**
+
+When it is not — revenue per converter, ARPPU, basket size, minutes per
+active user — the honest options are to report it as descriptive rather
+than as a guardrail, or to condition on something pre-treatment instead
+(option 3). What you must not do is present it as a harm. See
+[document 14](14-unit-economics.md), where this metric is ARPPU and is
+reported with exactly that caveat attached.
+
 ## The three roles
 
 `MetricSpec` requires you to say what a metric is **for**, and the three
