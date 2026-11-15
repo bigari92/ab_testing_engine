@@ -537,13 +537,37 @@ def bootstrap_diff(
     different question.
 
     THE P-VALUE HERE
-    Inverted from the interval by bisection on the confidence level: the
-    p-value is one minus the narrowest level whose interval still excludes
-    zero. Equivalent in spirit to the usual "share of resamples on the
-    other side of zero, doubled", and better behaved when the whole
-    bootstrap distribution lies on one side, where that share is 0 and the
-    naive p-value collapses to exactly 0 — a claim no 10,000-draw
-    simulation can support. Here the floor is 1/n_boot and is labelled.
+    The plain percentile method: the share of resampled differences on the
+    far side of zero, doubled for two-sidedness.
+
+        p = 2 * min( share(boot <= 0), share(boot >= 0) )
+
+    That is the percentile interval read the other way round — the level
+    at which the interval would just touch zero — so unlike the
+    pooled/unpooled pair in two_proportion, the test and the interval here
+    can never contradict each other.
+
+    The share collapses to exactly 0.0 once no resample crosses zero, and
+    p = 0 from 10,000 draws is a claim the draws cannot support: all they
+    establish is p < 1/n_boot. So the value is floored there and the note
+    says so — the resolution of the method, stated, rather than a zero
+    that reads as certainty. Same policy as P_FLOOR for the analytic
+    tests.
+
+    AND A CORRECTION TO WHAT THIS DOCSTRING USED TO SAY. It described the
+    p-value as "inverted from the interval by bisection on the confidence
+    level: one minus the narrowest level whose interval still excludes
+    zero". No bisection was ever here, and there is no search over
+    confidence levels in the code below. The two methods agree in spirit
+    and the floor handles the case the old text worried about, so nothing
+    downstream was ever wrong — but a docstring describing an
+    implementation that does not exist is worse than no docstring, because
+    it is what a reviewer checks the code against. Same failure mode as
+    norm_ppf's confident explanation of its own bug, in statlib.py.
+
+    Found while writing docs/06-what-an-interval-means.md, which makes
+    that the cheapest defect-finding tool in this project: explaining a
+    mechanism to somebody else is a check no test suite performs.
 
     LIMITS, STATED
     The percentile bootstrap is not magic. It inherits whatever bias the
