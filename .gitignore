@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+
+# Generated datasets and their answer keys are reproducible from
+# data/generate.py with the seeds recorded in the docs, so they are not
+# committed. Delete this line if you want them in the repository.
+data/generated/
+
+.DS_Store
+Thumbs.db

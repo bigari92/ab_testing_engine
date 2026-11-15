@@ -1,0 +1,11 @@
+# The library itself needs numpy and pandas only. The distributions in
+# statlib.py are implemented from first principles so that nothing in
+# src/explab imports SciPy.
+numpy>=1.26
+pandas>=2.0
+
+# Development only: the independent references the tests check against,
+# and the test runner.
+scipy>=1.11
+statsmodels>=0.14
+pytest>=8.0
