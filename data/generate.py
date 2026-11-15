@@ -186,7 +186,7 @@ def generate_experiment(
     # `habit`, which is what makes the pre-period a useful covariate at all.
     # This is the metric CUPED is for. Conversion and revenue are not: they
     # are zero for most users, so their correlation with any pre-period
-    # measure is weak, and docs/11 shows that contrast rather than hiding it.
+    # measure is weak, and docs/10 shows that contrast rather than hiding it.
     habit = 18.0 + 9.0 * q + rng.standard_normal(n_users) * 2.0
     pre_minutes = np.clip(habit + rng.standard_normal(n_users) * 5.0, 0.0, None)
     minutes = np.clip(habit + rng.standard_normal(n_users) * 5.0, 0.0, None)

@@ -121,7 +121,7 @@ class MetricSpec:
             raise ValueError(
                 f"metric {self.name!r}: CUPED is implemented for continuous "
                 "metrics here. On a 0/1 outcome the pre-period correlation is "
-                "usually near zero anyway - see docs/11."
+                "usually near zero anyway - see docs/10."
             )
         if self.practical_threshold is not None and self.practical_threshold <= 0:
             raise ValueError(

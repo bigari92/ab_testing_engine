@@ -60,7 +60,13 @@ def main() -> int:
         proof.check_close(
             f"variance reduction at rho={rho}", result.reduction,
             variance_reduction(rho), tolerance=0.01,
-            detail=f"theory says 1 - rho^2 = {variance_reduction(rho):.4f}",
+            # Var(Y_adj) = (1 - rho^2) Var(Y), so the share REMOVED is
+            # rho^2. This label used to read "1 - rho^2" above a number
+            # that was rho^2 - right claim, wrong caption, which is the
+            # kind of thing that survives a passing test suite forever.
+            detail=f"theory says rho^2 = {variance_reduction(rho):.4f} "
+                   f"of the variance is removed, leaving "
+                   f"{1.0 - variance_reduction(rho):.4f}",
         )
     print()
 

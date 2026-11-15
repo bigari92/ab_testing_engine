@@ -33,7 +33,7 @@ TWO HONEST WAYS TO LOOK EARLY
    sequences that hold at every sample size simultaneously, so you may look
    continuously and even choose when to stop based on what you see. More
    flexible and more expensive in sample size. Deliberately out of scope —
-   see docs/19-what-this-does-not-cover.md.
+   see docs/18-what-this-does-not-cover.md.
 
 HOW THE BOUNDARIES ARE OBTAINED HERE
 ------------------------------------
