@@ -397,3 +397,58 @@ def test_chi2_with_1_df_is_the_squared_normal():
         assert sl.chi2_cdf(x, 1) == pytest.approx(
             2.0 * sl.norm_cdf(math.sqrt(x)) - 1.0, rel=1e-11
         )
+
+
+@pytest.mark.parametrize("df", [1, 2, 3, 5, 20, 100])
+@pytest.mark.parametrize("x", [1e-6, 0.1, 1.0, 3.84, 10.0, 50.0, 300.0, 1000.0])
+def test_chi2_sf_matches_scipy(x, df):
+    """Measured worst relative error over this grid: 2.7e-14."""
+    assert sl.chi2_sf(x, df) == pytest.approx(stats.chi2.sf(x, df),
+                                              rel=1e-12, abs=1e-300)
+
+
+def test_chi2_sf_survives_the_far_tail_where_the_subtraction_does_not():
+    """The regression for the seventh defect found in this project.
+
+    srm.py computed its p-value as `1 - chi2_cdf(chi2, df)`. On 1 degree
+    of freedom that returns exactly 0.0 for every chi-square past about
+    100, and a sample ratio mismatch is the single test most likely to
+    produce one: srm.py's own docstring calls an 11-sigma deviation the
+    ordinary case at two million users.
+
+    So the asserts below are in pairs. The first of each pair is what the
+    old expression returned; the second is the truth.
+    """
+    for chi in (100.0, 200.0, 400.0, 1000.0):
+        assert 1.0 - sl.chi2_cdf(chi, 1) == 0.0          # what it used to say
+        assert sl.chi2_sf(chi, 1) > 0.0                  # what is true
+        assert sl.chi2_sf(chi, 1) == pytest.approx(stats.chi2.sf(chi, 1),
+                                                   rel=1e-11)
+    # The specific values, so a rewrite cannot quietly regress them.
+    assert sl.chi2_sf(100.0, 1) == pytest.approx(1.5230178e-23, rel=1e-6)
+    assert sl.chi2_sf(400.0, 1) == pytest.approx(2.5597525e-89, rel=1e-6)
+
+
+def test_chi2_sf_and_cdf_sum_to_one_where_both_are_accurate():
+    """Both branches of gammainc_upper, checked against their complement.
+
+    In the middle of the distribution neither function is near its limits,
+    so the identity must hold to machine precision. This is the test that
+    catches a mirrored branch applied on the wrong side of x = a + 1.
+    """
+    for df in (1, 2, 7, 30):
+        for x in (0.3, 1.0, 2.5, 6.0, 12.0, 25.0):
+            assert sl.chi2_cdf(x, df) + sl.chi2_sf(x, df) == pytest.approx(
+                1.0, rel=1e-14
+            )
+
+
+def test_srm_reports_a_real_p_value_on_an_impossible_split():
+    """The defect as it actually appeared: a readout printing `p = 0`."""
+    from explab.srm import srm_check
+
+    r = srm_check({"control": 94_000, "treatment": 100_000})
+    assert not r.passed
+    assert r.p_value > 0.0
+    assert r.p_value == pytest.approx(stats.chi2.sf(r.chi_square, 1), rel=1e-10)
+    assert "p = 0," not in str(r)

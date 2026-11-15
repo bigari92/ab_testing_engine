@@ -48,7 +48,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
-from .statlib import chi2_cdf, norm_ppf
+from .statlib import chi2_sf, norm_ppf
 
 __all__ = ["SRMResult", "srm_check"]
 
@@ -169,7 +169,10 @@ def srm_check(
         (counts[a] - e) ** 2 / e for a, e in zip(arms, expected)
     )
     df = len(arms) - 1
-    p_value = 1.0 - chi2_cdf(chi_square, df)
+    # chi2_sf, not 1 - chi2_cdf: on 1 df that subtraction returns
+    # exactly 0.0 for any chi-square past about 100, and an SRM check
+    # is the test most likely to produce one. See statlib.chi2_sf.
+    p_value = chi2_sf(chi_square, df)
 
     # The arm furthest from expectation, measured in standardised units so
     # a big arm and a small arm are compared fairly.

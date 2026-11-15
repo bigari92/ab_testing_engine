@@ -57,7 +57,8 @@ from .statlib import norm_cdf, norm_ppf, t_cdf, t_ppf
 
 __all__ = [
     "PowerPlan", "sample_size_means", "sample_size_proportions",
-    "mde_means", "mde_proportions", "power_at", "power_at_proportions",
+    "mde_means", "mde_proportions", "mde_from_standard_error",
+    "power_at", "power_at_proportions",
 ]
 
 
@@ -253,6 +254,42 @@ def mde_means(
     z_alpha = norm_ppf(1.0 - alpha / 2.0)
     z_power = norm_ppf(power)
     return float((z_alpha + z_power) * sd * math.sqrt(2.0 / n_per_group))
+
+
+def mde_from_standard_error(
+    se: float,
+    *,
+    alpha: float = 0.05,
+    power: float = 0.80,
+) -> float:
+    """The smallest effect detectable given an already-computed standard error.
+
+    The most general form of the MDE, and the one to reach for when the
+    standard error came from somewhere the closed-form helpers above
+    cannot reproduce: a delta-method ratio, a CUPED-adjusted mean, a
+    bootstrap. The derivation in docs/07 bottoms out at
+
+        effect / se  >=  z_alpha + z_power
+
+    and mde_means and mde_proportions are just that identity with a
+    particular `se` substituted in. Here the `se` is supplied, so no
+    assumption about the metric's distribution or the allocation is
+    needed - which is exactly why it works for a ratio metric, where the
+    design effect makes `sd * sqrt(2/n)` the wrong standard error by a
+    factor of sqrt(DE). See docs/11.
+
+    WHY THIS EXISTS AT ALL. Ratio metrics used to report no MDE: analyze()
+    set `detectable = None` for them and said nothing. That left a
+    guardrail's "no harm detected" unreadable in precisely the case
+    docs/02 was written about - the refund guardrail there IS a ratio
+    metric - while the course claimed the MDE was reported. Found by
+    writing docs/17, where two of the three guardrails on a recruitment
+    funnel came back flat with no sensitivity attached.
+    """
+    _check_rates(alpha, power)
+    if se <= 0:
+        raise ValueError(f"se must be positive, got {se}")
+    return float((norm_ppf(1.0 - alpha / 2.0) + norm_ppf(power)) * se)
 
 
 def mde_proportions(

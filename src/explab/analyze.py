@@ -59,7 +59,7 @@ from .cuped import CupedResult, cuped_adjust
 from .inference import (TestResult, ratio_delta, two_proportion_from_arrays,
                         welch_t)
 from .multiplicity import Adjusted, benjamini_hochberg
-from .power import mde_means, mde_proportions
+from .power import mde_from_standard_error, mde_means, mde_proportions
 from .srm import SRMResult, srm_check
 
 __all__ = ["MetricSpec", "Readout", "analyze"]
@@ -205,7 +205,18 @@ def _run_metric(
             treatment[spec.denominator].to_numpy(float),
             metric=spec.name, confidence=confidence,
         )
-        detectable = None
+        # The MDE from the delta-method standard error itself. There is no
+        # closed form here - the design effect (docs/11) makes
+        # sd*sqrt(2/n) wrong by sqrt(DE) - but the standard error the
+        # delta method just computed already carries it, so the general
+        # identity effect/se >= z_alpha + z_power applies directly.
+        # Without this a ratio guardrail reported "no harm detected" with
+        # no sensitivity attached, which is the one thing docs/02 says
+        # never to do.
+        try:
+            detectable = mde_from_standard_error(result.se, alpha=alpha)
+        except ValueError:
+            detectable = None
         notes.append(
             "randomisation unit is the row, denominator unit is finer; "
             "the delta method keeps the standard error at the randomised unit"

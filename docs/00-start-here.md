@@ -108,6 +108,23 @@ by its own tests, after the code was written and the proofs were passing:
   on the confidence level. The function has always computed a doubled tail
   share instead. Found by writing document 06 — not by any test, because a
   test asserts behaviour and this was a false claim about *mechanism*.
+- `proof_cuped.py` printed the caption `theory says 1 - rho^2` above a
+  number that was `rho^2`. The claim it checked was correct; only the
+  caption was wrong.
+- Ratio metrics reported no minimum detectable effect at all —
+  `analyze()` set `detectable = None` and said nothing. That left a
+  guardrail's "no harm detected" unreadable in exactly the case document
+  02 is about, since the refund guardrail there *is* a ratio metric.
+- `srm.py` computed its p-value as `1 - chi2_cdf(...)`, which on one
+  degree of freedom returns exactly `0.0` for every chi-square past about
+  100 — where the truth is 1.5e-23. The check whose own docstring calls an
+  11-sigma deviation ordinary was reporting those deviations as `p = 0`.
+  There was no `chi2_sf`; now there is.
+
+The last three were found by writing documents 10, 17 and 17. Writing the
+explanation is the cheapest defect-finding tool in this project, because a
+test asserts behaviour while an explanation has to assert the *reason* —
+and the reason is where the misunderstandings live.
 
 They are in here on purpose, with the measurements that found them. A
 course that only shows the finished thing teaches you the finished thing.

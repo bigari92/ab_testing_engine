@@ -42,9 +42,9 @@ from __future__ import annotations
 import math
 
 __all__ = [
-    "log_gamma", "betainc", "gammainc_lower",
+    "log_gamma", "betainc", "gammainc_lower", "gammainc_upper",
     "norm_pdf", "norm_cdf", "norm_sf", "norm_ppf",
-    "t_cdf", "t_sf", "t_ppf", "chi2_cdf",
+    "t_cdf", "t_sf", "t_ppf", "chi2_cdf", "chi2_sf",
 ]
 
 # Smallest number we let a continued-fraction denominator become, so a zero
@@ -216,6 +216,27 @@ def gammainc_lower(a: float, x: float) -> float:
     if x < a + 1.0:
         return _gamma_series(a, x)
     return 1.0 - _gamma_cf(a, x)
+
+
+def gammainc_upper(a: float, x: float) -> float:
+    """Regularised UPPER incomplete gamma Q(a, x) = 1 - P(a, x), in [0, 1].
+
+    The companion `gammainc_lower` needed and did not have. `_gamma_cf`
+    already computes Q directly, so on the branch that matters - large x,
+    where Q is tiny - there is no subtraction at all and the relative
+    accuracy survives down to underflow.
+
+    The other branch is `1 - _gamma_series(a, x)`, used only where
+    x < a + 1 and therefore where P is nowhere near 1, so that
+    subtraction cancels nothing. Same mirroring trick as `betainc`.
+    """
+    if x < 0.0 or a <= 0.0:
+        raise ValueError(f"gammainc_upper needs x >= 0, a > 0; got a={a}, x={x}")
+    if x == 0.0:
+        return 1.0
+    if x < a + 1.0:
+        return 1.0 - _gamma_series(a, x)
+    return _gamma_cf(a, x)
 
 
 # --------------------------------------------------------------------------
@@ -498,3 +519,31 @@ def chi2_cdf(x: float, df: int) -> float:
     if x <= 0.0:
         return 0.0
     return gammainc_lower(0.5 * df, 0.5 * x)
+
+
+def chi2_sf(x: float, df: int) -> float:
+    """P(X > x), the chi-square upper tail, computed without cancellation.
+
+    The third member of the norm_sf / t_sf family, and the one that was
+    missing. `srm.py` computed its p-value as `1 - chi2_cdf(chi2, df)`,
+    and on 1 degree of freedom that expression returns exactly 0.0 for
+    every chi-square above about 100, where the true tail is 1.5e-23:
+    chi2_cdf has already rounded to 1.0 and the subtraction has nothing
+    left to subtract.
+
+    That mattered more here than anywhere else in the library, because a
+    sample ratio mismatch is the one test that routinely produces
+    enormous statistics - srm.py's own docstring describes an 11-sigma
+    deviation as the ordinary case at two million users. So the function
+    whose job is to flag impossible splits was reporting them with
+    `p = 0`, which is the credibility problem norm_sf exists to avoid,
+    in the readout where it is most likely to be read aloud.
+
+    Found by writing docs/17: a 6% logging gap on a 200,000-candidate
+    funnel printed `p = 0` into an otherwise careful report.
+    """
+    if df < 1:
+        raise ValueError(f"chi2_sf needs df >= 1, got {df}")
+    if x <= 0.0:
+        return 1.0
+    return gammainc_upper(0.5 * df, 0.5 * x)

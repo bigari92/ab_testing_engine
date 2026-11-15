@@ -1,0 +1,49 @@
+name: ci
+
+# The gate. This repository's claim is that every number in it is either
+# derived or measured, so CI runs both verification mechanisms and fails
+# on either. The scoring harness is not run here: it takes several
+# minutes and its job is to catch design errors during development, not
+# regressions on a commit.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 is the floor: the library uses `float | None` in
+        # annotations. The upper end is there because the proofs lean on
+        # numpy's Generator and on float formatting, and a silent change
+        # in either would show up as a claim failing rather than as an
+        # import error.
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Tests - cross-check against SciPy and statsmodels
+        run: python -m pytest tests/ -q
+
+      - name: Proofs - every claim measured against a known truth
+        run: python proofs/run_all.py
+
+      - name: Worked example runs end to end
+        run: python analysis/hiring_funnel_example.py
